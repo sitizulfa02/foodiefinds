@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <item name="linkGithub" type="id" />
+    <item name="copyright" type="id" />
+    <item name="github" type="id" />
+    <item name="nameid5" type="id" />
+    <item name="name5" type="id" />
+    <item name="nameid3" type="id" />
+    <item name="name3" type="id" />
+    <item name="nameid2" type="id" />
+    <item name="name2" type="id" />
+    <item name="nameid1" type="id" />
+    <item name="name1" type="id" />
+    <item name="imageView2" type="id" />
+    <item name="aboutTitle" type="id" />
+</resources>
