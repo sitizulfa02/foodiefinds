@@ -9,18 +9,30 @@ public class Foodtruck {
         @SerializedName("id")
         @Expose
         String id;
-        @SerializedName("name")
+
+        @SerializedName("operator_name")
         @Expose
-        String name;
-        @SerializedName("description")
+        String operator_name;
+
+        @SerializedName("foodtruck_name")
         @Expose
-        String description;
-        @SerializedName("lat")
+        String foodtruck_name;
+
+        @SerializedName("schedule")
         @Expose
-        String lat;
-        @SerializedName("lng")
+        String schedule;
+
+        @SerializedName("menu_items")
         @Expose
-        String lng;
+        String menu_items;
+
+        @SerializedName("latitude")
+        @Expose
+        String latitude;
+
+        @SerializedName("longitude")
+        @Expose
+        String longitude;
 
     }
 

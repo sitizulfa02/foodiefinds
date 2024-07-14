@@ -4,12 +4,15 @@ import android.Manifest;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.LayoutInflater;
 import android.view.View;
+import android.widget.Button;
+import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.ZoomControls;
-import androidx.appcompat.widget.Toolbar;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.Toolbar;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
@@ -25,145 +28,155 @@ import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.gson.Gson;
 
 import java.util.Vector;
 
-import dev.lab.foodieFinds.databinding.ActivityMapBinding;
-
 public class MapActivity extends AppCompatActivity implements OnMapReadyCallback {
 
     private GoogleMap mMap;
-    private ActivityMapBinding binding;
-
-    MarkerOptions marker;
-    LatLng centerlocation;
-    Vector<MarkerOptions> markerOptions;
-    ZoomControls zoomControls;
-
+    private Vector<MarkerOptions> markerOptions;
+    private ZoomControls zoomControls;
     private String URL = "http://foodiesfinds.atwebpages.com/all.php";
-    RequestQueue requestQueue;
-    Gson gson;
-    Foodtruck[] foodtrucks;
+    private Gson gson;
+    private Foodtruck[] foodtrucks;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_map);
 
-        binding = ActivityMapBinding.inflate(getLayoutInflater());
-        setContentView(binding.getRoot());
-
-        // Set up the toolbar
         Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
-        if (getSupportActionBar() != null) {
-            getSupportActionBar().setTitle("Map View");
-            getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-        }
+        getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+        getSupportActionBar().setTitle("Map View");
 
         gson = new Gson();
 
-        // Obtain the SupportMapFragment and get notified when the map is ready to be used.
-        SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
-                .findFragmentById(R.id.map);
-        mapFragment.getMapAsync(this);
+        SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map);
+        if (mapFragment != null) {
+            mapFragment.getMapAsync(this);
+        }
 
-        // Center location set to Dahlia 3
-        centerlocation = new LatLng(6.45119, 100.28457);
         markerOptions = new Vector<>();
 
-        // Initialize ZoomControls
         zoomControls = findViewById(R.id.zoomControls);
-        zoomControls.setOnZoomInClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                mMap.animateCamera(CameraUpdateFactory.zoomIn());
-            }
-        });
-        zoomControls.setOnZoomOutClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                mMap.animateCamera(CameraUpdateFactory.zoomOut());
-            }
-        });
+        zoomControls.setOnZoomInClickListener(v -> mMap.animateCamera(CameraUpdateFactory.zoomIn()));
+        zoomControls.setOnZoomOutClickListener(v -> mMap.animateCamera(CameraUpdateFactory.zoomOut()));
     }
 
     @Override
     public void onMapReady(GoogleMap googleMap) {
         mMap = googleMap;
 
-        // Add a permanent marker for Dahlia 3
-        LatLng dahlia3 = new LatLng(6.45119, 100.28457); // Coordinates for Dahlia 3
+        LatLng dahlia3 = new LatLng(6.45119, 100.28457);
         MarkerOptions dahlia3Marker = new MarkerOptions()
                 .position(dahlia3)
                 .title("My Location")
                 .snippet("Dahlia 3, UiTM Arau")
-                .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_BLUE));
+                .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED));
         mMap.addMarker(dahlia3Marker);
-
-        for (MarkerOptions mark : markerOptions) {
-            mMap.addMarker(mark);
-        }
 
         enableMyLocation();
 
-        // Move camera to Dahlia 3 with a suitable zoom level
-        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(dahlia3, 18)); // Zoom level adjusted as needed
+        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(dahlia3, 18));
 
-        // Send request to fetch food truck locations
         sendRequest();
+
+        mMap.setInfoWindowAdapter(new CustomInfoWindowAdapter());
+        mMap.setOnInfoWindowClickListener(this::showFullDetails);
     }
 
     private void enableMyLocation() {
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
-                == PackageManager.PERMISSION_GRANTED) {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
             if (mMap != null) {
                 mMap.setMyLocationEnabled(true);
             }
         } else {
-            String perms[] = {"android.permission.ACCESS_FINE_LOCATION"};
-            ActivityCompat.requestPermissions(this, perms, 200);
+            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 200);
         }
     }
 
-    public void sendRequest() {
+    private void sendRequest() {
         RequestQueue requestQueue = Volley.newRequestQueue(getApplicationContext());
-        StringRequest stringRequest = new StringRequest(Request.Method.GET, URL, onSuccess, onError);
+        StringRequest stringRequest = new StringRequest(Request.Method.GET, URL, this::handleResponse, this::handleError);
         requestQueue.add(stringRequest);
     }
 
-    public Response.Listener<String> onSuccess = new Response.Listener<String>() {
-        @Override
-        public void onResponse(String response) {
-            foodtrucks = gson.fromJson(response, Foodtruck[].class);
-            Log.d("Foodtruck", "Number of Maklumat Data Point: " + foodtrucks.length);
+    private void handleResponse(String response) {
+        Log.d("Foodtruck", "Response: " + response);
+        foodtrucks = gson.fromJson(response, Foodtruck[].class);
+        Log.d("Foodtruck", "Number of Foodtruck Data Points: " + foodtrucks.length);
 
-            if (foodtrucks.length < 1) {
-                Toast.makeText(getApplicationContext(), "Problem retrieving JSON data", Toast.LENGTH_LONG).show();
-            }
-
-            for (Foodtruck info : foodtrucks) {
-                Double lat = Double.parseDouble(info.lat);
-                Double lng = Double.parseDouble(info.lng);
-                String title = info.name;
-                String snippet = info.description;
-                MarkerOptions marker = new MarkerOptions().position(new LatLng(lat, lng))
-                        .title(title)
-                        .snippet(snippet)
-                        .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN));
-
-                mMap.addMarker(marker);
-            }
+        if (foodtrucks.length < 1) {
+            Toast.makeText(getApplicationContext(), "Problem retrieving JSON data", Toast.LENGTH_LONG).show();
         }
-    };
 
-    public Response.ErrorListener onError = new Response.ErrorListener() {
-        @Override
-        public void onErrorResponse(VolleyError error) {
-            Toast.makeText(getApplicationContext(), error.getMessage(), Toast.LENGTH_LONG).show();
+        for (Foodtruck info : foodtrucks) {
+            Log.d("Foodtruck Info", "Name: " + info.foodtruck_name + ", Schedule: " + info.schedule + ", Lat: " + info.latitude + ", Lng: " + info.longitude);
+
+            Double lat = Double.parseDouble(info.latitude);
+            Double lng = Double.parseDouble(info.longitude);
+            String title = info.foodtruck_name;
+            String snippet = "Operator: " + info.operator_name + "\nSchedule: " + info.schedule + "\nMenu: " + info.menu_items;
+
+            MarkerOptions marker = new MarkerOptions().position(new LatLng(lat, lng))
+                    .title(title)
+                    .snippet(snippet)
+                    .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN));
+
+            markerOptions.add(marker);
+            mMap.addMarker(marker);
         }
-    };
+    }
+
+    private void handleError(VolleyError error) {
+        Toast.makeText(getApplicationContext(), error.getMessage(), Toast.LENGTH_LONG).show();
+    }
+
+    private class CustomInfoWindowAdapter implements GoogleMap.InfoWindowAdapter {
+        private final View mWindow;
+
+        CustomInfoWindowAdapter() {
+            mWindow = LayoutInflater.from(MapActivity.this).inflate(R.layout.custom_info_window, null);
+        }
+
+        @Override
+        public View getInfoWindow(Marker marker) {
+            render(marker, mWindow);
+            return mWindow;
+        }
+
+        @Override
+        public View getInfoContents(Marker marker) {
+            render(marker, mWindow);
+            return mWindow;
+        }
+
+        private void render(Marker marker, View view) {
+            String title = marker.getTitle();
+            TextView tvTitle = view.findViewById(R.id.title);
+            tvTitle.setText(title != null ? title : "No Title");
+
+            String snippet = marker.getSnippet();
+            TextView tvSnippet = view.findViewById(R.id.snippet);
+            tvSnippet.setText(snippet != null ? snippet : "No Details");
+
+            Button btnShowMore = view.findViewById(R.id.btn_show_more);
+            btnShowMore.setOnClickListener(v -> showFullDetails(marker));
+        }
+    }
+
+    private void showFullDetails(Marker marker) {
+        FullDetailsDialogFragment dialog = new FullDetailsDialogFragment();
+        Bundle args = new Bundle();
+        args.putString("foodtruck_name", marker.getTitle());
+        args.putString("details", marker.getSnippet());
+        dialog.setArguments(args);
+        dialog.show(getSupportFragmentManager(), "full_details");
+    }
 
     @Override
     public boolean onSupportNavigateUp() {
