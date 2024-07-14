@@ -1,6 +1,6 @@
 <?php
 // db.php
-$link = mysqli_connect("localhost", "root", "", "4504534_foodtruck");
+$link = mysqli_connect("fdb1029.awardspace.net", "4504534_foodtruck", "Foodtruck02", "4504534_foodtruck");
 
 // Check connection
 if($link === false){

@@ -31,7 +31,7 @@ require_once('db.php');
 //select semua row dari table maklumat
 // SQL Query ini boleh ditukar ganti mengikut kesesuaian
 // contohnya boleh set LIMIT, WHERE, ORDER, dan GROUP
-$query = "SELECT * FROM foodtrucks";
+$query = "SELECT * FROM food_trucks";
 $result=mysqli_query($link,$query);
 
 //declare array
@@ -40,6 +40,9 @@ $output = array();
 //tambahkan row kepada array untuk setiap baris rekod...
 foreach ($result as $row) {
  array_push($output,$row);
+
+        
+        
 
 
 }

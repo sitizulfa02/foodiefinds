@@ -29,33 +29,39 @@
 
 
 
-require_once('db.php');
+<?php
+// Include the database connection file
+include 'db.php';
 
+// Initialize an array to hold the data
+$foodtrucks = array();
 
-//select semua row dari table comments
-// SQL Query ini boleh ditukar ganti mengikut kesesuaian
-// contohnya boleh set LIMIT, WHERE, ORDER, dan GROUP
-$query = "SELECT * FROM comments ORDER BY date DESC";
-$result=mysqli_query($link,$query);
+// SQL query to fetch the data
+$query = "SELECT id, operator_name, schedule, foodtruck_name, menu_items, latitude, longitude FROM foodtrucks";
+$result = mysqli_query($link, $query);
 
-//declare array
-$output = array();
-
-//tambahkan row kepada array untuk setiap baris rekod...
-foreach ($result as $row) {
- array_push($output,$row);
-
-
+if ($result) {
+    // Fetch data and populate the array
+    while ($row = mysqli_fetch_assoc($result)) {
+        $foodtrucks[] = array(
+            'id' => $row['id'],
+            'operator_name' => $row['operator_name'],
+            'schedule' => $row['schedule'],
+            'foodtruck_name' => $row['foodtruck_name'],
+            'menu_items' => $row['menu_items'],
+            'lat' => $row['latitude'],
+            'lng' => $row['longitude']
+        );
+    }
+    
+    // Output the data as JSON
+    header('Content-Type: application/json');
+    echo json_encode($foodtrucks);
+} else {
+    // If query fails, output an error
+    echo json_encode(array('error' => 'Error fetching data from database'));
 }
 
-// assign to json variable
-$json=json_encode($output);
-
-//declare document type to json and output json
-header("Content-Type: application/json");
-echo $json;
-
-
-
-
+// Close the database connection
+mysqli_close($link);
 ?>
